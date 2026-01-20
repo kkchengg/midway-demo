@@ -1,12 +1,12 @@
-# my_midway_project
+# MidwayJS Weather API Demo
 
 ## QuickStart
 
 <!-- add docs here for user -->
 <!-- user docs start -->
-# MidwayJS 天氣 API 專案
+# MidwayJS 天氣 API 專案（Production Ready）
 
-後端開發者（Rails/PHP/Java → Node.js/MidwayJS）學習記錄與技術棧文件
+**後端開發者學習記錄**：Rails/PHP/Java → Node.js/MidwayJS/TypeScript
 
 ## 🚀 專案功能
 
@@ -30,9 +30,11 @@ TypeScript: ✅ 全域 TS
 ```
 .
 ├── src/
-│   ├── configuration.ts      # 核心配置 + axios 攔截器
-│   ├── config/
-│   │   └── config.default.ts # 多 axios client 配置
+│   ├── configuration.ts              # 主入口（koa/validate）
+│   ├── configuration/                # 子配置
+│   │   ├── axios.configuration.ts    # HTTP client 攔截器
+│   │   └── config/
+│   │       └── config.default.ts     # 多 axios client 配置
 │   ├── controller/
 │   │   └── weather.controller.ts
 │   ├── service/
@@ -48,7 +50,7 @@ TypeScript: ✅ 全域 TS
 ### Phase 1: 從零開始的痛點
 ```
 ❌ fetch + async/await 陷阱
-  → data[0] undefined → TypeError: Cannot read properties of undefined (reading 'lat')
+  → data[0]?.lat undefined → TypeError（已解決）
 
 ❌ .env 未載入
   → process.env.OPENWEATHERMAP_API_KEY = undefined
@@ -81,30 +83,20 @@ Rails 習慣 → Node.js/Midway 對應
 
 ### 1. 多 Client Axios 配置
 ```ts
-// config/config.default.ts
+// src/configuration/config/config.default.ts
 axios: {
   clients: {
-    default: { timeout: 10000 },      // 內部呼叫
-    weatherApi: {                     // OpenWeather 專用
-      baseURL: 'http://api.openweathermap.org',
+    default: { timeout: 10000 },      
+    weatherApi: {                     
+      baseURL: process.env.OPENWEATHERMAP_API_URL,  # ✅ 環境變數
       timeout: 5000,
+      params: { appid: process.env.OPENWEATHERMAP_API_KEY! },  # ✅ 全局自動加
     },
   },
 }
 ```
 
-### 2. 全局攔截器（Configuration.ts）
-```ts
-async onReady(container: IMidwayContainer) {
-  const httpServiceFactory = await container.getAsync(axios.HttpServiceFactory);
-  for (const clientName of ['default', 'weatherApi']) {
-    const httpService = httpServiceFactory.get(clientName);
-    // request/response 攔截器：統一 log + 錯誤格式化
-  }
-}
-```
-
-### 3. Service 注入（正確寫法）
+### 2. Service 注入（正確寫法）
 ```ts
 @Provide()
 export class WeatherService {
@@ -125,7 +117,7 @@ export class WeatherService {
 npm install
 
 # 2. 設定 API Key
-echo "OPENWEATHERMAP_API_KEY=your_key_here" > .env
+cp .env.example .env  # 填 OPENWEATHERMAP_API_KEY
 
 # 3. 啟動開發伺服器
 npm run dev
@@ -149,6 +141,27 @@ curl "http://localhost:7001/weather?city=kowloon"
 }
 ```
 
+## 🧪 API 文件
+
+```bash
+# ✅ 成功
+curl "http://localhost:7001/weather?city=Kowloon"
+→ { "success": true, "data": { "city": "Kowloon", "weather": "26.5" } }
+
+# ✅ 錯誤處理
+curl "http://localhost:7001/weather?city=不存在"
+→ { "success": false, "message": "No location found for city: 不存在" }
+```
+
+## 📊 Console 日誌（生產級）
+
+```
+[WEATHERAPI] GET /geo/1.0/direct?appid=xxx&q=Kowloon&limit=1
+✅ [WEATHERAPI] /geo/1.0/direct OK (200)
+[WEATHERAPI] GET /data/2.5/weather?appid=xxx&lat=22.3&lon=114.1&units=metric
+✅ [WEATHERAPI] /data/2.5/weather OK (200)
+```
+
 ## 💡 學習重點總結
 
 | Rails/Java 概念 | MidwayJS/Node.js 實現 | 關鍵心得 |
@@ -157,7 +170,7 @@ curl "http://localhost:7001/weather?city=kowloon"
 | HTTP Client | `@midwayjs/axios` | 攔截器 > 原生 fetch |
 | Config Mgmt | `config.default.ts` | 多環境 + 多 client |
 | Error Handling | 全局攔截器 + `try/catch` | 統一格式最重要 |
-| Env Vars | `dotenv.config()` | configuration.ts 最前 |
+| Env Vars | `dotenv.config()` | src/configuration.ts（固定） |
 
 ## 🚀 下一步擴展
 
@@ -186,21 +199,3 @@ see [midway docs][midway] for more detail.
 ### Development
 
 ```bash
-$ npm i
-$ npm run dev
-$ open http://localhost:7001/
-```
-
-### Deploy
-
-```bash
-$ npm start
-```
-
-### npm scripts
-
-- Use `npm run lint` to check code style.
-- Use `npm test` to run unit test.
-
-
-[midway]: https://midwayjs.org

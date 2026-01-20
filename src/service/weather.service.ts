@@ -10,6 +10,9 @@ export class WeatherService {
   @Init()
   async init() {
     this.httpService = await this.httpServiceFactory.get('weatherApi');
+    if (!this.httpService) {
+      throw new Error('weatherApi client not available');
+    }
   }
 
   async getWeatherInfo(
@@ -21,7 +24,6 @@ export class WeatherService {
       params: {
         lat,
         lon,
-        appid: process.env.OPENWEATHERMAP_API_KEY!,
         units: 'metric',
       },
     });
@@ -36,7 +38,6 @@ export class WeatherService {
       params: {
         q: city,
         limit: 1,
-        appid: process.env.OPENWEATHERMAP_API_KEY!,
       },
     });
 

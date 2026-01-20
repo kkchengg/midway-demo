@@ -14,11 +14,13 @@ export default {
       },
       // weatherApi：OpenWeather 專用
       weatherApi: {
-        baseURL: 'http://api.openweathermap.org',
+        baseURL: process.env.OPENWEATHERMAP_API_URL,
         timeout: 5000,
+        params: {
+          appid: process.env.OPENWEATHERMAP_API_KEY!,
+        },
       },
       // 以後加：paymentApi: { baseURL: 'https://api.stripe.com' }
     },
   },
-
 } as MidwayConfig;
